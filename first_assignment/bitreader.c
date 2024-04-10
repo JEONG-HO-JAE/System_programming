@@ -1,5 +1,6 @@
 #include "bitreader.h"
 
+
 int main(int argc, char *argv[]) {
     
     if (argc != 2) {
@@ -7,20 +8,76 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     
-    FILE* file = fopen(argv[1], "r");
+    FILE* file = fopen("input", "r");
     if (!file) {
         perror("Error opening file");
         return 1;
     }
-       
+    
     readBitsSaveAsByte(file);
     fclose(file);
     return 0;
 }
+
+float bitPatternToFloat(const char *bitPattern) {
+    // 부호 비트 추출
+    int sign = (bitPattern[0] == '1') ? -1 : 1;
+
+    // 지수 추출 및 계산
+    int exponent = 0;
+    for (int i = 1; i <= 8; ++i) {
+        exponent = exponent * 2 + (bitPattern[i] - '0');
+    }
+    exponent -= 127; // Bias를 제거하여 실제 지수 계산
+
+    // 가수 추출 및 계산
+    float mantissa = 1.0; // 정규화된 수는 암시적으로 1을 앞에 가집니다.
+    for (int i = 9; i < 32; ++i) {
+        if (bitPattern[i] == '1') {
+            mantissa += pow(2, -1 * (i - 8));
+        }
+    }
+
+    // 최종 float 값 계산
+    float value = sign * mantissa * pow(2, exponent);
+    return value;
+}
+
+double bitPatternToDouble(const char *bitPattern) {
+    int sign = (bitPattern[0] == '1') ? -1 : 1; // 부호 결정
+
+    // 지수 부분 해석
+    int exponent = 0;
+    for (int i = 1; i <= 11; ++i) {
+        exponent = exponent * 2 + (bitPattern[i] - '0');
+    }
+    exponent -= 1023; // Bias 제거
+
+    // 가수 부분 해석
+    double mantissa = 1.0; // 암시적으로 맨 앞에 1이 있음
+    for (int i = 12; i < 64; ++i) {
+        if (bitPattern[i] == '1') {
+            mantissa += pow(2, -1 * (i - 11));
+        }
+    }
+
+    // 최종 double 값 계산
+    double value = sign * mantissa * pow(2, exponent);
+    return value;
+}
+
 void printAsDataTypes(unsigned char *bytes, size_t size) {
 
+    // printf("address: ");
+    // for(int i = 0; i < size; i++){
+    //     printf("%p ", (void *)(bytes + i));
+    // }
+    // printf("\n");
+    printf("\n");
+    printf("================Result==============\n");
+
     printf("Signed char: ");
-    for (int i = size/sizeof(signed char) - 1; i >=0; i--) {
+    for (int i = 0; i < size; i++) {
         printf("%d ", *(signed char *)(bytes + i * sizeof(signed char)));
     }
     printf("\n");
@@ -28,8 +85,8 @@ void printAsDataTypes(unsigned char *bytes, size_t size) {
     // Print each byte as an ASCII character if printable, otherwise print a dot
     printf("ASCII character: ");
     signed char *schar_val = (signed char *)bytes;
-    for (int i = size - 1; i >= 0; i--) {
-        if (schar_val[i] >= 32 && schar_val[i] <= 126) {
+    for (int i = 0; i < size; i++) {
+        if (schar_val[i] >= 0 && schar_val[i] <= 127) {
             printf("%c ", schar_val[i]);
         } else {
             printf(". ");
@@ -38,39 +95,66 @@ void printAsDataTypes(unsigned char *bytes, size_t size) {
     printf("\n");
 
     printf("Unsigned char : ");
-    for (int i = size/sizeof(unsigned char) - 1; i >= 0; i--) {
+    for (int i = 0; i < size; i++) {
         printf("%u ", *(unsigned char *)(bytes + i * sizeof(unsigned char)));
     }
     printf("\n");
 
     printf("Signed int : ");
-    for (int i = size/sizeof(signed int) - 1; i >= 0; i--) {
+    for (int i = 0; i < size / sizeof(signed int); i++) {
         printf("%d ", *(signed int *)(bytes + i * sizeof(signed int)));
     }
     printf("\n");
 
     printf("Unsigned int : ");
-    for (int i = size/sizeof(unsigned int) - 1; i >= 0; i--) {
+    for (int i = 0; i < size/sizeof(unsigned int); i++) {
         printf("%u ", *(unsigned int *)(bytes + i * sizeof(unsigned int)));
     }
     printf("\n");
 
-    printf("Float: ");
-    if (size >= sizeof(float)) {
-        for (int i = size / sizeof(float) - 1; i >= 0; i--) {
-            //printf("%f, %d, %d", (float*)(bytes + i * sizeof(float)), *(float*)(bytes + i * sizeof(float)), bytes + i * sizeof(float));
-            printf("%.4f ", *(float*)(bytes + i * sizeof(float)));
-        }
+
+    printf("Float : ");
+    for (size_t i = 0; i < size / 4; ++i) {
+        const unsigned char *block = &bytes[i * 4];
+        
+        // (32bit + null)
+        char bitPattern[33];
+        int bitIndex = 0;
+        
+        // byte -> bit (format: char*)
+        for (int j = 0; j < 4; ++j) {
+            for (int bit = 7; bit >= 0; --bit) {
+                bitPattern[bitIndex++] = (block[j] & (1 << bit)) ? '1' : '0';
+            }
+        }   
+        // End of bit = Null
+        bitPattern[bitIndex] = '\0';
+        float floatValue = bitPatternToFloat(bitPattern);
+        printf("%.4e ", floatValue);
     }
     printf("\n");
 
-    printf("Double: ");
-    if (size >= sizeof(double)) {
-        for (int i = size / sizeof(double) - 1; i >= 0; i--) {
-            printf("%.4f", *(double *)(bytes + i * sizeof(double)));
-        } 
+    printf("Double : ");
+    for (size_t i = 0; i < size / 8; ++i) {
+        const unsigned char *block = &bytes[i * 8];
+        
+        // (64bit + null)
+        char bitPattern[65];
+        int bitIndex = 0;
+        
+        // byte -> bit (format: char*)
+        for (int j = 0; j < 4; ++j) {
+            for (int bit = 7; bit >= 0; --bit) {
+                bitPattern[bitIndex++] = (block[j] & (1 << bit)) ? '1' : '0';
+            }
+        }   
+        // End of bit = Null
+        bitPattern[bitIndex] = '\0';
+        double doubleValue = bitPatternToDouble(bitPattern);
+        printf("%.4e ", doubleValue);
     }
     printf("\n");
+
 }
 
 void readBitsSaveAsByte(FILE *file) {
@@ -80,7 +164,8 @@ void readBitsSaveAsByte(FILE *file) {
 
     unsigned char *bytes = NULL;
     size_t size = 0;
-
+    printf("================Info==============\n");
+    printf("Input data(bit data): ");
     // Read characters from the file
     while ((bit = fgetc(file)) != EOF) {
         printf("%c", bit);
@@ -109,6 +194,7 @@ void readBitsSaveAsByte(FILE *file) {
     }
 
     if (size > 0) {
+        printf("Size: %lu Byte(s)\n", size);
         printAsDataTypes(bytes, size); // Consider checking size before interpreting the data
     }
     free(bytes); // Move free outside the loop
