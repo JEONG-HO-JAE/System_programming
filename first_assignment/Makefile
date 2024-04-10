@@ -5,7 +5,10 @@ TARGET=bitreader
 all: $(TARGET)
 
 $(TARGET): bitreader.c
-	$(CC) $(CFLAGS) -o $(TARGET) bitreader.c
+	$(CC) $(CFLAGS) -o $(TARGET) bitreader.c -lm
 
 clean:
 	rm -f $(TARGET)
+
+run: $(TARGET)
+	./$(TARGET) input
