@@ -1,14 +1,11 @@
 CC=gcc
 CFLAGS=-Wall
-TARGET=bitreader
+TARGET=20182745
 
 all: $(TARGET)
 
-$(TARGET): bitreader.c
-	$(CC) $(CFLAGS) -o $(TARGET) bitreader.c -lm
+$(TARGET): 20182745.c
+	$(CC) $(CFLAGS) -o $(TARGET) 20182745.c -lm
 
 clean:
 	rm -f $(TARGET)
-
-run: $(TARGET)
-	./$(TARGET) input
