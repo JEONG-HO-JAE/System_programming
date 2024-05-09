@@ -2,8 +2,6 @@ CC=gcc
 CFLAGS=-Wall
 TARGET=20182745
 
-all: $(TARGET)
-
 $(TARGET): 20182745.c
 	$(CC) $(CFLAGS) -o $(TARGET) 20182745.c -lm
 
