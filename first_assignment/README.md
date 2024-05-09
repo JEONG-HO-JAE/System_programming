@@ -1,4 +1,5 @@
 # First Assignment
+## Goal
 • Read a file that contains characters only “0” or “1”
     E.g., 0101010101000001010100101111010101000100101010111010101010  
 • File name that your program needs to read is “input”  
